@@ -408,7 +408,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
         writer.write("werte="+"<?xml version=\"1.0\" encoding=\"utf-8\"?>"+"\n"+"<kml xmlns=\"http://www.opengis.net/kml/2.2>"+"\n"+"<Document>"+"\n"+"<Placemark> "+
                 "\n" +"<name>"+sendename+"</name>"+"\n"+"<Point>"+"\n"+"<coordinates>"+latitude+","+longitude+
-                "</coordinates>"+"\n"+"</Point>"+"\n"+"</Placemark>"+"\n"+"<GPSFix>"+trackingCounter+"</GPSFix>"+"</Document>"+"\n"+"</kml>");
+                "</coordinates>"+"\n"+"</Point>"+"\n"+"</Placemark>"+"\n"+"<GPSFix>"+trackingCounter+"</GPSFix>"+"</Document>"+"\n"+"</kml>"+"          "+sendename);
         writer.close();
 
         // Dateicheck zum Server
@@ -419,6 +419,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         else {
             System.out.println("SENDEN FEHLGESCHLAGEN");
+            Toast.makeText(this,"Senden fehlgeschlagen",Toast.LENGTH_SHORT).show();
             connection.disconnect();
         }
         trackingCounter = 0;
