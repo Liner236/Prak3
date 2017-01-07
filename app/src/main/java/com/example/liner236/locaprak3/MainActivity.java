@@ -18,12 +18,14 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.vision.text.TextBlock;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -44,7 +46,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private int meter;
     private int speed;
     private int trackingCounter = 0;
-
+    //Locas für Distance
     private Location loca1 = null;
     private Location loca2 = null;
 
@@ -52,11 +54,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager sensorManager;
     private Sensor gyro;
     private double x,y,z;
-
+    //Checkboxen
     private CheckBox cb_periodic;
     private CheckBox cb_meter;
     private CheckBox cb_speed;
     private CheckBox cb_movement;
+
+    private TextView tv_speed;
 
 
     @Override
@@ -142,12 +146,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         meterList.add("100");
 
         List<String> speedList = new ArrayList<String>();
-        meterList.add("1");
-        meterList.add("2");
-        meterList.add("3");
-        meterList.add("5");
-        meterList.add("10");
-        meterList.add("15");
+        speedList.add("1");
+        speedList.add("2");
+        speedList.add("3");
+        speedList.add("5");
+        speedList.add("10");
+        speedList.add("15");
 
 
         //Spinner Style
@@ -163,6 +167,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         spin_periodic.setAdapter(dataAdapterSec);
         spin_meter.setAdapter(dataAdapterMeter);
         spin_speed.setAdapter(dataAdapterSpeed);
+
+
+        tv_speed = (TextView)findViewById(R.id.tv_speed);
+
 
 
         Button btn_start_tracking = (Button)findViewById(R.id.btn_start_tracking);
@@ -229,7 +237,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onLocationChanged(Location location) {
         if (isRunning == true){
-
+            tv_speed.setText(location.getSpeed() +" km/h");
             if(cb_periodic.isChecked()){
                 trackGpsValues(location);
                 trackingCounter ++;
@@ -257,7 +265,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
             else if(cb_speed.isChecked()){
                 trackingCounter ++;
-                if (location.getSpeed() == speed){
+                if (location.getSpeed() >= speed){
                     trackGpsValues(location);
 
                     try {
@@ -406,6 +414,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Dateicheck zum Server
         if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
             System.out.println("SENDEN ERFOLGREICH");
+            Toast.makeText(this,"Senden erfolgreich",Toast.LENGTH_SHORT).show();
             connection.disconnect();
         }
         else {
@@ -413,5 +422,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             connection.disconnect();
         }
         trackingCounter = 0;
+
     }
 }
