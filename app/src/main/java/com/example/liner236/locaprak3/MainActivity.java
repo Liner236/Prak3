@@ -7,6 +7,7 @@ import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.StrictMode;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -24,6 +25,10 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,6 +43,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private int periodicTime = 1000; // Standart 1 Sekunde
     private int meter;
     private int speed;
+    private int trackingCounter = 0;
+
+    private Location loca1 = null;
+    private Location loca2 = null;
 
     //Gyroskop
     private SensorManager sensorManager;
@@ -54,6 +63,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Damit die APP wegen den Rechten nicht direkt crasht
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
 
         Spinner spin_periodic = (Spinner) findViewById(R.id.spin_peridoic);
         spin_periodic.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -83,6 +96,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         });
 
+        Spinner spin_speed = (Spinner) findViewById(R.id.spin_speed);
+        spin_speed.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                speed = Integer.parseInt(parent.getItemAtPosition(position).toString());
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+
+        });
+
         cb_periodic = (CheckBox)findViewById(R.id.cb_periodic);
         cb_meter = (CheckBox)findViewById(R.id.cb_meter);
         cb_speed = (CheckBox)findViewById(R.id.cb_speed);
@@ -91,6 +118,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         sensorManager = (SensorManager) this.getSystemService(SENSOR_SERVICE);
         gyro = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         sensorManager.registerListener(this,gyro,SensorManager.SENSOR_DELAY_NORMAL);
+
+        loca1 = new Location("loca1");
+        loca2 = new Location("loca2");
 
 
 
@@ -111,6 +141,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         meterList.add("75");
         meterList.add("100");
 
+        List<String> speedList = new ArrayList<String>();
+        meterList.add("1");
+        meterList.add("2");
+        meterList.add("3");
+        meterList.add("5");
+        meterList.add("10");
+        meterList.add("15");
+
 
         //Spinner Style
         ArrayAdapter<String> dataAdapterSec = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, secList);
@@ -119,8 +157,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         ArrayAdapter<String> dataAdapterMeter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, meterList);
         dataAdapterMeter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
+        ArrayAdapter<String> dataAdapterSpeed = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, speedList);
+        dataAdapterSpeed.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
         spin_periodic.setAdapter(dataAdapterSec);
         spin_meter.setAdapter(dataAdapterMeter);
+        spin_speed.setAdapter(dataAdapterSpeed);
 
 
         Button btn_start_tracking = (Button)findViewById(R.id.btn_start_tracking);
@@ -133,7 +175,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 cb_speed.setEnabled(false);
                 cb_periodic.setEnabled(false);
 
+                // Festlegen der First Location fürs Tracking in Metern
+                loca1.setLatitude(latitude);
+                loca1.setLongitude(longitude);
+
                 startGoogleLocationUpdates();
+                System.out.println("FUCK U !! ");
 
             }
         });
@@ -147,6 +194,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 cb_meter.setEnabled(true);
                 cb_speed.setEnabled(true);
                 cb_periodic.setEnabled(true);
+                trackingCounter = 0;
 
             }
         });
@@ -181,20 +229,53 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onLocationChanged(Location location) {
         if (isRunning == true){
+
             if(cb_periodic.isChecked()){
                 trackGpsValues(location);
+                trackingCounter ++;
+                System.out.println("TRACKED !! " + longitude);
+                try {
+                    senden();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
             else if (cb_meter.isChecked()){
-
+                trackGpsValues(location);
+                loca2.setLatitude(latitude);
+                loca2.setLongitude(longitude);
+                trackingCounter ++;
+                if (loca1.distanceTo(loca2) >= meter){
+                    try {
+                        senden();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    loca1.setLatitude(latitude);
+                    loca1.setLongitude(longitude);
+                }
             }
             else if(cb_speed.isChecked()){
+                trackingCounter ++;
                 if (location.getSpeed() == speed){
                     trackGpsValues(location);
+
+                    try {
+                        senden();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
             else if(cb_movement.isChecked()){
                 if(x >= 0.5 || y >= 0.5 || z >= 0.5 || x <= -0.5 || y <= -0.5 || z <= -0.5){
                     trackGpsValues(location);
+                    trackingCounter ++;
+                    try {
+                        senden();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                     System.out.println("Latitude: " + getLatitude() + "\tLongitude: " + getLongitude());
                 }
             }
@@ -291,5 +372,46 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
+    }
+
+    public void senden() throws IOException {
+        String sendename;
+        sendename = "Huren";
+        if (cb_periodic.isChecked()){
+            sendename = "Periodisch";
+        }
+        else if (cb_meter.isChecked()){
+            sendename = "Meter";
+        }
+        else if (cb_speed.isChecked()){
+            sendename = "Speed";
+        }
+        else {
+            sendename = "Movement";
+        }
+
+        // Stuff für die Verbindung
+        URL url = new URL("http://mapps.sittekonline.de/index.php");
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setDoOutput(true);
+        connection.setRequestMethod("POST");
+
+        // Schreibe Daten im KML auf Server
+        OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
+        writer.write("werte="+"<?xml version=\"1.0\" encoding=\"utf-8\"?>"+"\n"+"<kml xmlns=\"http://www.opengis.net/kml/2.2>"+"\n"+"<Document>"+"\n"+"<Placemark> "+
+                "\n" +"<name>"+sendename+"</name>"+"\n"+"<Point>"+"\n"+"<coordinates>"+latitude+","+longitude+
+                "</coordinates>"+"\n"+"</Point>"+"\n"+"</Placemark>"+"\n"+"<GPSFix>"+trackingCounter+"</GPSFix>"+"</Document>"+"\n"+"</kml>");
+        writer.close();
+
+        // Dateicheck zum Server
+        if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+            System.out.println("SENDEN ERFOLGREICH");
+            connection.disconnect();
+        }
+        else {
+            System.out.println("SENDEN FEHLGESCHLAGEN");
+            connection.disconnect();
+        }
+        trackingCounter = 0;
     }
 }
